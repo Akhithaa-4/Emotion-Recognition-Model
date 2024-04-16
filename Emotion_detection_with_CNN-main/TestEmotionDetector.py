@@ -17,12 +17,12 @@ print("Loaded model from disk")
 detection_duration = 5
 
 # Start the webcam feed or use a video file
-cap = cv2.VideoCapture(0)
-
-# Lists to hold detected emotions
+#cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("C:\\Users\\Akhitha P\\samplevideos\\video1\\videoo1.mp4")
+# Emotion lists and user emotions dictionary
 positive_emotions = ["Happy", "Surprised", "Neutral"]
 negative_emotions = ["Angry", "Disgusted", "Fearful", "Sad"]
-detected_emotions = []
+user_emotions = {}
 
 # Get the current time
 start_time = time.time()
@@ -42,7 +42,7 @@ while True:
     faces = face_detector.detectMultiScale(gray_frame, scaleFactor=1.3, minNeighbors=5)
 
     # Process each face detected
-    for (x, y, w, h) in faces:
+    for user_id, (x, y, w, h) in enumerate(faces):
         cv2.rectangle(frame, (x, y - 50), (x + w, y + h + 10), (0, 255, 0), 4)
         roi_gray_frame = gray_frame[y:y + h, x:x + w]
         cropped_img = np.expand_dims(np.expand_dims(cv2.resize(roi_gray_frame, (48, 48)), -1), 0)
@@ -51,7 +51,12 @@ while True:
         emotion_prediction = emotion_model.predict(cropped_img)
         maxindex = int(np.argmax(emotion_prediction))
         detected_emotion = emotion_dict[maxindex]
-        detected_emotions.append(detected_emotion)
+
+        # Store detected emotions for each user
+        if user_id not in user_emotions:
+            user_emotions[user_id] = []
+
+        user_emotions[user_id].append(detected_emotion)
 
         cv2.putText(frame, detected_emotion, (x + 5, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
@@ -73,13 +78,14 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
-# Provide summary of emotions detected
-positive_count = sum(1 for e in detected_emotions if e in positive_emotions)
-negative_count = sum(1 for e in detected_emotions if e in negative_emotions)
+# Provide user-wise summary of emotions detected
+for user_id, emotions in user_emotions.items():
+    positive_count = sum(1 for e in emotions if e in positive_emotions)
+    negative_count = sum(1 for e in emotions if e in negative_emotions)
 
-if positive_count > negative_count:
-    print("Positive review: The user expressed positive emotions more frequently.")
-elif negative_count > positive_count:
-    print("Negative review: The user expressed negative emotions more frequently.")
-else:
-    print("Neutral review: The user expressed balanced emotions.")
+    if positive_count > negative_count:
+        print(f"User{user_id} - Positive review")
+    elif negative_count > positive_count:
+        print(f"User{user_id} - Negative review")
+    else:
+        print(f"User{user_id} - Neutral review")
